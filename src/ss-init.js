@@ -49,11 +49,10 @@ for (var i = 0,len=answers.names.length; i <len; i++) {
   Str +=`"module_${answers.names[i]}":true`;
   if(i<len-1){
     Str+=`,
-      `
+  `
   }
 }
-var compileConfig=`
-{
+var compileConfig=`{
     "host": "localhost:10240",
     "hostname": "localhost",
     "port": "10240",
@@ -62,10 +61,115 @@ var compileConfig=`
       "module_base":true,
       ${Str}
     }
-}
-`
+}`
 fs.writeFileSync(`${process.cwd()}/${answers.name}/build/server.config.json`, compileConfig)
 
+// ss-s.base
+
+var Str2=''
+answers.names.forEach((item)=>{
+  Str2+=`
+  <Menu-item name="${item}">
+      <icon type="ios-navigate"></icon>
+      <span>${item}</span>
+  </Menu-item>`
+})
+fs.writeFileSync(`${process.cwd()}/${answers.name}/packages/ss-s.base/src/view/main/main.vue`, `
+<template>
+    <div class="layout">
+        <Menu mode="horizontal" theme="dark" active-name="${answers.names[0]}" @on-select="toRoute">
+            <div class="layout-logo"></div>
+            <div class="layout-nav">
+                ${Str2}
+            </div>
+        </Menu>
+        <div class="layout-content">
+            <router-view></router-view>
+        </div>
+        <div class="layout-copy">
+            2011-2016 © TalkingData
+        </div>
+    </div>
+</template>
+<script>
+export default {
+  data () {
+    return {}
+  },
+  methods: {
+      toRoute(routeName){
+          this.$router.push({ name: routeName})
+      },
+  }
+}
+</script>
+<style src="./main.scss"></style>
+`)
+
+
+// 子模块
+answers.names.forEach((item)=>{
+  generateSub(item,answers)
+})
+}
+
+
+function generateSub(item,answers){
+fs.writeFileSync(`${process.cwd()}/${answers.name}/packages/${item}/src/main/index.vue`, `
+<template>
+<div class="panel home-panel">
+    {{name}}
+</div>
+</template>
+
+<script>
+export default {
+  computed:{
+    name(){
+      return this.$store.state.${item}.name
+    }
+  },
+  created(){
+  }
+}
+</script>
+<style>
+</style>
+`)
+
+fs.writeFileSync(`${process.cwd()}/${answers.name}/packages/${item}/src/routerConfig.js`, `
+export default {
+  init () {
+    return {
+      route:[{
+          path: '${item}',
+          component: r => require.ensure([], () => r(require('./index.vue')), '${item}'),
+          children: [{
+            path: '',
+            title: '${item}',
+            name: '${item}',
+            component: r => require.ensure([], () => r(require('./main/index.vue')), '${item}')
+          }]
+        }]
+    }
+  }
+}
+`)
+
+fs.writeFileSync(`${process.cwd()}/${answers.name}/packages/${item}/store/index.js`, `
+export default{
+  init(store){
+    store.registerModule('${item}', { //模块动态注册
+     namespaced: true,
+     state: {
+       name:'${item}'
+     },
+     mutations: {},
+     actions: {},
+   })
+  }
+}
+`)
 }
 // generate()
 
@@ -104,7 +208,7 @@ function downloader(answers){
   let promiseArr=[]
   promiseArr.push(download('ClydeKuo/template.main', path.resolve(process.cwd(),answers.name),{ clone: false }))
   promiseArr.push(download('ClydeKuo/ss-s.core', path.resolve(process.cwd(),answers.name,'packages','ss-s.core'),{ clone: false }))
-  promiseArr.push(download('ClydeKuo/ss-s.base', path.resolve(process.cwd(),answers.name,'packages','ss-s.base'),{ clone: false }))
+  promiseArr.push(download('ClydeKuo/template.base', path.resolve(process.cwd(),answers.name,'packages','ss-s.base'),{ clone: false }))
   answers.names.forEach((item)=>{
     promiseArr.push(download('ClydeKuo/template.submodule', path.resolve(process.cwd(),answers.name,'packages',item),{ clone: false }))
   })
